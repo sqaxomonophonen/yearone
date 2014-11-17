@@ -231,7 +231,7 @@ void render_init(struct render* render, SDL_Window* window)
 	}
 }
 
-void render_sun(struct render* render, struct celestial_body* sun, float radius, float x, float y)
+void render_sun(struct render* render, struct celestial_body* sun, float x, float y)
 {
 	shader_use(&render->sun_shader);
 	{
@@ -239,6 +239,7 @@ void render_sun(struct render* render, struct celestial_body* sun, float radius,
 		float dy = y / render->window_height * 2;
 		glUniform2f(render->sun_u_offset, dx, dy); CHKGL;
 
+		float radius = sun->mock_radius;
 		float sx = radius / render->window_width * 2;
 		float sy = radius / render->window_height * 2;
 		glUniform2f(render->sun_u_scale, sx, sy); CHKGL;
@@ -261,7 +262,7 @@ void render_sun(struct render* render, struct celestial_body* sun, float radius,
 	glDisableVertexAttribArray(render->sun_a_position); CHKGL;
 }
 
-void render_body(struct render* render, struct celestial_body* body, float radius, float x, float y)
+void render_body(struct render* render, struct celestial_body* body, float x, float y)
 {
 	shader_use(&render->body_shader);
 	{
@@ -269,6 +270,7 @@ void render_body(struct render* render, struct celestial_body* body, float radiu
 		float dy = y / render->window_height * 2;
 		glUniform2f(render->body_u_offset, dx, dy); CHKGL;
 
+		float radius = body->mock_radius;
 		float sx = radius / render->window_width * 2;
 		float sy = radius / render->window_height * 2;
 		glUniform2f(render->body_u_scale, sx, sy); CHKGL;
@@ -372,11 +374,11 @@ void render_celestial_body(struct render* render, struct celestial_body* body, f
 
 	switch (body->renderer) {
 		case CBR_SUN:
-			render_sun(render, body, 40, cx, cy);
+			render_sun(render, body, cx, cy);
 			break;
 		case CBR_BODY:
 			render_orbit(render, body, scale, cx, cy);
-			render_body(render, body, 20, cx, cy);
+			render_body(render, body, cx, cy);
 			break;
 	}
 }

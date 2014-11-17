@@ -21,7 +21,6 @@ http://www.stargazing.net/kepler/kepler.html
 #define ECCENTRICITY (1<<4)
 
 
-
 enum {
 	MODE_COUNT = 4242,
 	MODE_MK = 6669
@@ -47,6 +46,7 @@ struct swoozle {
 }* swoozle;
 
 static void rgb(float r, float g, float b);
+static void mock_radius(float r);
 
 static void _begin(const char* name, int expected_cflags)
 {
@@ -65,6 +65,7 @@ static void _begin(const char* name, int expected_cflags)
 		cbody->name = chars + n_chars;
 		strcpy(cbody->name, name);
 		rgb(1,0,1);
+		mock_radius(16);
 
 		swoozle[n_bodies].level = level;
 		swoozle[n_bodies].n = n_bodies;
@@ -179,6 +180,12 @@ static void rgb(float r, float g, float b)
 	cbody->color[2] = b;
 }
 
+static void mock_radius(float r)
+{
+	if (cbody == NULL) return;
+	cbody->mock_radius = r;
+}
+
 static void emit_bodies()
 {
 	begin_sun("sol");
@@ -186,6 +193,7 @@ static void emit_bodies()
 		radius_km(696342);
 		sidereal_rotation_period_days(25.05);
 		rgb(1.0,1.0,0.5);
+		mock_radius(32);
 
 		begin_planet("mercury");
 			mass_kg(3.3022e23);
@@ -196,6 +204,7 @@ static void emit_bodies()
 			longitude_of_periapsis_deg(77.45645);
 			mean_longitude_j2000_deg(252.25084);
 			rgb(0.7, 0.3, 0.3);
+			mock_radius(12);
 		end();
 
 		begin_planet("venus");
@@ -207,6 +216,7 @@ static void emit_bodies()
 			longitude_of_periapsis_deg(131.53298);
 			mean_longitude_j2000_deg(181.97973);
 			rgb(0.9, 0.92, 0.9);
+			mock_radius(16);
 		end();
 
 		begin_planet("earth");
@@ -218,6 +228,7 @@ static void emit_bodies()
 			longitude_of_periapsis_deg(102.94719);
 			mean_longitude_j2000_deg(100.46435);
 			rgb(0.6, 0.8, 0.4);
+			mock_radius(16);
 
 			begin_moon("luna");
 				mass_kg(7.3477e22);
@@ -226,6 +237,7 @@ static void emit_bodies()
 				eccentricity(0.0549);
 				synchronous_rotation();
 				rgb(0.4, 0.4, 0.4);
+				mock_radius(10);
 			end();
 		end();
 
@@ -238,6 +250,7 @@ static void emit_bodies()
 			longitude_of_periapsis_deg(336.04084);
 			mean_longitude_j2000_deg(355.45332);
 			rgb(0.9, 0.5, 0.0);
+			mock_radius(14);
 
 			begin_moon("phobos");
 				mass_kg(1.0659e16);
@@ -246,6 +259,7 @@ static void emit_bodies()
 				eccentricity(0.0151);
 				synchronous_rotation();
 				rgb(0.4, 0.4, 0.4);
+				mock_radius(7);
 			end();
 
 			begin_moon("deimos");
@@ -255,6 +269,7 @@ static void emit_bodies()
 				eccentricity(0.00033);
 				synchronous_rotation();
 				rgb(0.4, 0.4, 0.4);
+				mock_radius(6);
 			end();
 		end();
 
@@ -267,6 +282,7 @@ static void emit_bodies()
 			longitude_of_periapsis_deg(14.75385);
 			mean_longitude_j2000_deg(34.40438);
 			rgb(1.0, 0.7, 0.7);
+			mock_radius(24);
 		end();
 
 		begin_planet("saturn");
@@ -278,6 +294,7 @@ static void emit_bodies()
 			longitude_of_periapsis_deg(92.43194);
 			mean_longitude_j2000_deg(49.94432);
 			rgb(1.0, 0.7, 0.3);
+			mock_radius(22);
 		end();
 
 		begin_planet("uranus");
@@ -289,6 +306,7 @@ static void emit_bodies()
 			longitude_of_periapsis_deg(170.96424);
 			mean_longitude_j2000_deg(313.23218);
 			rgb(0.7, 0.8, 0.9);
+			mock_radius(18);
 		end();
 
 		begin_planet("neptune");
@@ -300,6 +318,7 @@ static void emit_bodies()
 			longitude_of_periapsis_deg(131.72169);
 			mean_longitude_j2000_deg(304.88003);
 			rgb(0.4, 0.6, 1.0);
+			mock_radius(17);
 		end();
 
 		begin_planet("pluto");
@@ -311,6 +330,7 @@ static void emit_bodies()
 			longitude_of_periapsis_deg(224.06676);
 			mean_longitude_j2000_deg(238.92881);
 			rgb(0.4, 0.4, 0.4);
+			mock_radius(10);
 		end();
 
 	end();

@@ -14,6 +14,7 @@ struct celestial_body {
 	struct celestial_body* satellites;
 	int n_satellites;
 	float mass_kg;
+	float mock_radius;
 	float radius_km;
 	float semi_major_axis_km;
 	float eccentricity;
