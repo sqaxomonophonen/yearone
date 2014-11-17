@@ -314,8 +314,8 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 		float x,y,nx,ny;
 		calc_ellipse_position(E, e, a, b, body->longitude_of_periapsis_rad, &x, &y, &nx, &ny);
 
-		x = x * scale / render->window_width * 2;
-		y = y * scale / render->window_height * 2;
+		x = (cx + x * scale) / render->window_width * 2;
+		y = (cy + y * scale) / render->window_height * 2;
 
 		float dn = 1.0/sqrtf(nx*nx + ny*ny);
 		nx = nx * dn / render->window_width * 2 * width;
@@ -362,14 +362,14 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 	glDisableVertexAttribArray(render->path_a_position); CHKGL;
 }
 
-void render_celestial_body(struct render* render, struct celestial_body* body, float scale, float t, float cx, float cy)
+void render_celestial_body(struct render* render, struct celestial_body* body, float scale, float t, float cx, float cy, float px, float py)
 {
 	ASSERT(body->n_satellites == 0 || body->satellites != NULL);
 	for (int i = 0; i < body->n_satellites; i++) {
 		struct celestial_body* child = &body->satellites[i];
 		float dx,dy;
 		kepler_calc_position(child, body, t, &dx, &dy);
-		render_celestial_body(render, child, scale, t, cx + dx * scale, cy + dy * scale);
+		render_celestial_body(render, child, scale, t, cx + dx * scale, cy + dy * scale, cx, cy);
 	}
 
 	switch (body->renderer) {
@@ -377,7 +377,7 @@ void render_celestial_body(struct render* render, struct celestial_body* body, f
 			render_sun(render, body, cx, cy);
 			break;
 		case CBR_BODY:
-			render_orbit(render, body, scale, cx, cy);
+			render_orbit(render, body, scale, px, py);
 			render_body(render, body, cx, cy);
 			break;
 	}
@@ -386,7 +386,7 @@ void render_celestial_body(struct render* render, struct celestial_body* body, f
 void render_world(struct render* render, struct world* world, struct observer* observer)
 {
 	float scale = (float)render->window_height / observer->height_km;
-	render_celestial_body(render, world->sol, scale, world->t, 0, 0);
+	render_celestial_body(render, world->sol, scale, world->t, 0, 0, -1, -1);
 }
 
 int main(int argc, char** argv)
