@@ -73,12 +73,12 @@ void world_init(struct world* world, struct celestial_body* sol)
 
 struct observer {
 	float height_km;
+	int center_id;
 };
 
 void observer_init(struct observer* observer)
 {
 	memset(observer, 0, sizeof(*observer));
-	observer->height_km = 200000000;
 }
 
 
@@ -262,7 +262,7 @@ void render_sun(struct render* render, struct celestial_body* sun, float x, floa
 	glDisableVertexAttribArray(render->sun_a_position); CHKGL;
 }
 
-void render_body(struct render* render, struct celestial_body* body, float x, float y)
+void render_body(struct render* render, struct celestial_body* body, float x0, float y0, float x, float y)
 {
 	shader_use(&render->body_shader);
 	{
@@ -278,8 +278,8 @@ void render_body(struct render* render, struct celestial_body* body, float x, fl
 		float mu = 4.0/(radius*6.0);
 		glUniform1f(render->body_u_mu, mu); CHKGL;
 
-		float lx = -x;
-		float ly = -y;
+		float lx = -x0;
+		float ly = -y0;
 		float d = 1/sqrtf(lx*lx + ly*ly);
 		glUniform2f(render->body_u_light, lx*d, ly*d); CHKGL;
 
@@ -362,14 +362,22 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 	glDisableVertexAttribArray(render->path_a_position); CHKGL;
 }
 
-void render_celestial_body(struct render* render, struct celestial_body* body, float scale, float t, float cx, float cy, float px, float py)
+void render_celestial_body(struct render* render, struct celestial_body* body, float scale, float t, float cx, float cy, float px, float py, float sx, float sy)
 {
 	ASSERT(body->n_satellites == 0 || body->satellites != NULL);
 	for (int i = 0; i < body->n_satellites; i++) {
 		struct celestial_body* child = &body->satellites[i];
 		float dx,dy;
 		kepler_calc_position(child, body, t, &dx, &dy);
-		render_celestial_body(render, child, scale, t, cx + dx * scale, cy + dy * scale, cx, cy);
+		render_celestial_body(
+			render,
+			child,
+			scale,
+			t,
+			cx + dx * scale, cy + dy * scale,
+			cx, cy,
+			sx + dx * scale, sy + dy * scale
+		);
 	}
 
 	switch (body->renderer) {
@@ -378,15 +386,42 @@ void render_celestial_body(struct render* render, struct celestial_body* body, f
 			break;
 		case CBR_BODY:
 			render_orbit(render, body, scale, px, py);
-			render_body(render, body, cx, cy);
+			render_body(render, body, sx, sy, cx, cy);
 			break;
+	}
+}
+
+void find_center(struct render* render, struct celestial_body* find, struct celestial_body* body, float scale, float t, float cx, float cy, float* rcx, float* rcy)
+{
+	if (find == body) {
+		*rcx = cx;
+		*rcy = cy;
+		return;
+	}
+
+	ASSERT(body->n_satellites == 0 || body->satellites != NULL);
+	for (int i = 0; i < body->n_satellites; i++) {
+		struct celestial_body* child = &body->satellites[i];
+		float dx,dy;
+		kepler_calc_position(child, body, t, &dx, &dy);
+		find_center(render, find, child, scale, t, cx + dx * scale, cy + dy * scale, rcx, rcy);
 	}
 }
 
 void render_world(struct render* render, struct world* world, struct observer* observer)
 {
 	float scale = (float)render->window_height / observer->height_km;
-	render_celestial_body(render, world->sol, scale, world->t, 0, 0, -1, -1);
+	float cx, cy;
+	find_center(render, world->sol + observer->center_id, world->sol, scale, world->t, 0, 0, &cx, &cy);
+	render_celestial_body(
+		render,
+		world->sol,
+		scale,
+		world->t,
+		-cx, -cy,
+		-1, -1,
+		0, 0
+	);
 }
 
 int main(int argc, char** argv)
@@ -446,8 +481,9 @@ int main(int argc, char** argv)
 	struct observer observer;
 	observer_init(&observer);
 
-	float lx = 1;
-	float ly = 0;
+	observer.center_id = 4;
+	observer.height_km = 3e8;
+
 	int exiting = 0;
 	while (!exiting) {
 		SDL_Event e;
@@ -458,10 +494,6 @@ int main(int argc, char** argv)
 					break;
 				case SDL_KEYDOWN:
 					if (e.key.keysym.sym == SDLK_ESCAPE) exiting = 1;
-					break;
-				case SDL_MOUSEMOTION:
-					lx = e.motion.x - 1920/2;
-					ly = e.motion.y - 1080/2;
 					break;
 				case SDL_MOUSEWHEEL:
 					observer.height_km *= powf(0.9, e.wheel.y);
