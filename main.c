@@ -113,7 +113,6 @@ struct render {
 	GLuint sun_u_offset;
 	GLuint sun_u_scale;
 	GLuint sun_u_mu;
-	GLuint sun_u_color;
 
 	struct shader body_shader;
 	GLuint body_a_position;
@@ -184,7 +183,6 @@ void render_init(struct render* render, SDL_Window* window)
 		render->sun_u_offset = glGetUniformLocation(render->sun_shader.program, "u_offset"); CHKGL;
 		render->sun_u_scale = glGetUniformLocation(render->sun_shader.program, "u_scale"); CHKGL;
 		render->sun_u_mu = glGetUniformLocation(render->sun_shader.program, "u_mu"); CHKGL;
-		render->sun_u_color = glGetUniformLocation(render->sun_shader.program, "u_color"); CHKGL;
 	}
 
 	{ /* body shader */
@@ -247,12 +245,6 @@ void render_sun(struct render* render, struct celestial_body* sun, float x, floa
 
 		float mu = 4.0/(radius*6.0);
 		glUniform1f(render->sun_u_mu, mu); CHKGL;
-
-		glUniform3f(
-			render->sun_u_color,
-			sun->color[0],
-			sun->color[1],
-			sun->color[2]); CHKGL;
 	}
 
 	glEnableVertexAttribArray(render->sun_a_position); CHKGL;
@@ -383,9 +375,11 @@ void render_celestial_body(struct render* render, struct celestial_body* body, f
 
 	switch (body->renderer) {
 		case CBR_SUN:
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 			render_sun(render, body, cx, cy);
 			break;
 		case CBR_BODY:
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); CHKGL;
 			render_orbit(render, body, scale, px, py);
 			render_body(render, body, sx, sy, cx, cy);
 			break;
@@ -471,7 +465,7 @@ int main(int argc, char** argv)
 
 	glEnable(GL_BLEND); CHKGL;
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); CHKGL;
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); CHKGL;
 
 	fonts_init();
 
@@ -487,7 +481,7 @@ int main(int argc, char** argv)
 	struct observer observer;
 	observer_init(&observer);
 
-	observer.center_id = 4;
+	observer.center_id = 0;
 	observer.height_km = 3e8;
 
 	int exiting = 0;

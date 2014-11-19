@@ -192,8 +192,8 @@ static void emit_bodies()
 		mass_kg(1.98855e30);
 		radius_km(696342);
 		sidereal_rotation_period_days(25.05);
-		rgb(1.0,1.0,0.5);
-		mock_radius(32);
+		rgb(1,0,1);
+		mock_radius(64);
 
 		begin_planet("mercury");
 			mass_kg(3.3022e23);

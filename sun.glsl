@@ -20,7 +20,6 @@ void main()
 
 varying vec2 v_position;
 uniform float u_mu;
-uniform vec3 u_color;
 
 void main(void)
 {
@@ -30,8 +29,10 @@ void main(void)
 		for (float dx = -N; dx <= N; dx++) {
 			vec2 spos = v_position + vec2(dx*u_mu,dy*u_mu);
 			float r = dot(spos, spos);
-			if (r < 0.95) {
-				color += vec4(u_color,1);
+			if (r < 0.4) {
+				color += vec4(1,1,1-r,1);
+			} else if (r < 0.95) {
+				color += vec4(0.8-r,0.6-r,0.5-r,1);
 			}
 		}
 	}
