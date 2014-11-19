@@ -129,6 +129,11 @@ static void radius_km(float km)
 	cbody->radius_km = km;
 }
 
+static void diameter_km(float km)
+{
+	radius_km(km/2);
+}
+
 static void sidereal_rotation_period_days(float d)
 {
 	*cflags |= SIDEREAL_ROTATION_PERIOD;
@@ -283,6 +288,46 @@ static void emit_bodies()
 			mean_longitude_j2000_deg(34.40438);
 			rgb(1.0, 0.7, 0.7);
 			mock_radius(24);
+
+			begin_moon("io");
+				mass_kg(8931900 * 1e16);
+				diameter_km(3660);
+				semi_major_axis_km(421700);
+				eccentricity(0.0041);
+				synchronous_rotation();
+				rgb(0.7, 0.7, 0.2);
+				mock_radius(6);
+			end();
+
+			begin_moon("europa");
+				mass_kg(4800000 * 1e16);
+				diameter_km(3121.6);
+				semi_major_axis_km(671034);
+				eccentricity(0.0094);
+				synchronous_rotation();
+				rgb(0.6, 0.4, 0.4);
+				mock_radius(6);
+			end();
+
+			begin_moon("ganymede");
+				mass_kg(14819000 * 1e16);
+				diameter_km(5262.4);
+				semi_major_axis_km(1070412);
+				eccentricity(0.0011);
+				synchronous_rotation();
+				rgb(0.51, 0.5, 0.5);
+				mock_radius(6);
+			end();
+
+			begin_moon("callisto");
+				mass_kg(10759000 * 1e16);
+				diameter_km(4820.6);
+				semi_major_axis_km(1882709);
+				eccentricity(0.0074);
+				synchronous_rotation();
+				rgb(0.51, 0.5, 0.6);
+				mock_radius(6);
+			end();
 		end();
 
 		begin_planet("saturn");
@@ -295,6 +340,76 @@ static void emit_bodies()
 			mean_longitude_j2000_deg(49.94432);
 			rgb(1.0, 0.7, 0.3);
 			mock_radius(22);
+
+			begin_moon("mimas");
+				mass_kg(37493 * 1e15);
+				diameter_km(396.4);
+				semi_major_axis_km(185404);
+				eccentricity(0.0202);
+				synchronous_rotation();
+				rgb(0.6, 0.6, 0.6);
+				mock_radius(6);
+			end();
+
+			begin_moon("enceladus");
+				mass_kg(108022 * 1e15);
+				diameter_km(504.2);
+				semi_major_axis_km(237950);
+				eccentricity(0.0047);
+				synchronous_rotation();
+				rgb(0.7, 0.7, 0.7);
+				mock_radius(6);
+			end();
+
+			begin_moon("tethys");
+				mass_kg(617449 * 1e15);
+				diameter_km(1062);
+				semi_major_axis_km(294619);
+				eccentricity(0.0001);
+				synchronous_rotation();
+				rgb(0.7, 0.7, 0.7);
+				mock_radius(6);
+			end();
+
+			begin_moon("dione");
+				mass_kg(1095452 * 1e15);
+				diameter_km(1122.8);
+				semi_major_axis_km(377396);
+				eccentricity(0.0022);
+				synchronous_rotation();
+				rgb(0.7, 0.7, 0.7);
+				mock_radius(6);
+			end();
+
+			begin_moon("rhea");
+				mass_kg(2306518 * 1e15);
+				diameter_km(1527.0);
+				semi_major_axis_km(527108);
+				eccentricity(0.001258);
+				synchronous_rotation();
+				rgb(0.6, 0.6, 0.6);
+				mock_radius(6);
+			end();
+
+			begin_moon("titan");
+				mass_kg(134520000 * 1e15);
+				diameter_km(5151.0);
+				semi_major_axis_km(1221930);
+				eccentricity(0.0288);
+				synchronous_rotation();
+				rgb(0.7, 0.6, 0.1);
+				mock_radius(6);
+			end();
+
+			begin_moon("iapetus");
+				mass_kg(1805635 * 1e15);
+				diameter_km(1468.6);
+				semi_major_axis_km(3560820);
+				eccentricity(0.028613);
+				synchronous_rotation();
+				rgb(0.5, 0.5, 0.5);
+				mock_radius(6);
+			end();
 		end();
 
 		begin_planet("uranus");
