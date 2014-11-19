@@ -10,6 +10,7 @@
 #include "shader.h"
 #include "mud.h"
 #include "sol.h"
+#include "text.h"
 
 static float eccentric_anomaly_from_mean_anomaly(float M, float eccentricity, int iterations)
 {
@@ -472,8 +473,13 @@ int main(int argc, char** argv)
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); CHKGL;
 
+	fonts_init();
+
 	struct render render;
 	render_init(&render, window);
+
+	struct text text;
+	text_init(&text);
 
 	struct world world;
 	world_init(&world, sol);
@@ -504,7 +510,13 @@ int main(int argc, char** argv)
 		glClearColor(0,0,0,1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		world.t += 10000;
+		text_set_window_dimensions(&text, render.window_width, render.window_height);
+		float color[4] = {1,0,0,1};
+		text_set_style(&text, font_ter24, 0, color);
+		text_set_cursor(&text, 32, 32);
+		text_printf(&text, "%.2f", world.t);
+
+		world.t += 200;
 
 		render_world(&render, &world, &observer);
 
