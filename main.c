@@ -230,7 +230,7 @@ void render_init(struct render* render, SDL_Window* window)
 	}
 }
 
-void render_sun(struct render* render, struct celestial_body* sun, float x, float y)
+void render_sun(struct render* render, struct celestial_body* sun, float scale, float x, float y)
 {
 	shader_use(&render->sun_shader);
 	{
@@ -238,7 +238,8 @@ void render_sun(struct render* render, struct celestial_body* sun, float x, floa
 		float dy = y / render->window_height * 2;
 		glUniform2f(render->sun_u_offset, dx, dy); CHKGL;
 
-		float radius = sun->mock_radius;
+		float actual_radius = sun->radius_km * scale;
+		float radius = actual_radius > sun->mock_radius ? actual_radius : sun->mock_radius;
 		float sx = radius / render->window_width * 2;
 		float sy = radius / render->window_height * 2;
 		glUniform2f(render->sun_u_scale, sx, sy); CHKGL;
@@ -255,7 +256,7 @@ void render_sun(struct render* render, struct celestial_body* sun, float x, floa
 	glDisableVertexAttribArray(render->sun_a_position); CHKGL;
 }
 
-void render_body(struct render* render, struct celestial_body* body, float x0, float y0, float x, float y)
+void render_body(struct render* render, struct celestial_body* body, float scale, float x0, float y0, float x, float y)
 {
 	shader_use(&render->body_shader);
 	{
@@ -263,7 +264,8 @@ void render_body(struct render* render, struct celestial_body* body, float x0, f
 		float dy = y / render->window_height * 2;
 		glUniform2f(render->body_u_offset, dx, dy); CHKGL;
 
-		float radius = body->mock_radius;
+		float actual_radius = body->radius_km * scale;
+		float radius = actual_radius > body->mock_radius ? actual_radius : body->mock_radius;
 		float sx = radius / render->window_width * 2;
 		float sy = radius / render->window_height * 2;
 		glUniform2f(render->body_u_scale, sx, sy); CHKGL;
@@ -376,12 +378,12 @@ void render_celestial_body(struct render* render, struct celestial_body* body, f
 	switch (body->renderer) {
 		case CBR_SUN:
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-			render_sun(render, body, cx, cy);
+			render_sun(render, body, scale, cx, cy);
 			break;
 		case CBR_BODY:
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); CHKGL;
 			render_orbit(render, body, scale, px, py);
-			render_body(render, body, sx, sy, cx, cy);
+			render_body(render, body, scale, sx, sy, cx, cy);
 			break;
 	}
 }
