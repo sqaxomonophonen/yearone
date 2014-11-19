@@ -9,6 +9,7 @@ struct font {
 	GLuint texture;
 	int bitmap_width;
 	int bitmap_height;
+	int size;
 	int n_variants;
 	int n_meta;
 	int* meta;
@@ -23,14 +24,20 @@ struct text {
 	struct shader shader;
 	GLuint a_position;
 	GLuint a_uv;
-	GLuint u_color;
+	GLuint a_color;
 	int window_width;
 	int window_height;
 
 	struct font* current_font;
 	int current_variant;
 	float current_color[4];
-	int cx,cy;
+	int cx0,cx,cy;
+
+	GLuint vertex_buffer;
+	float* vertex_data;
+	GLuint index_buffer;
+	int max_quads;
+	int n_quads;
 };
 
 void text_init(struct text* text);
@@ -38,6 +45,7 @@ void text_set_window_dimensions(struct text* text, int width, int height);
 void text_set_style(struct text* text, struct font* font, int variant, float color[4]);
 void text_set_cursor(struct text* text, int cx, int cy);
 void text_printf(struct text* text, const char* fmt, ...) __attribute__((format (printf, 2, 3)));
+void text_flush(struct text* text);
 
 
 #endif/*TEXT_H*/

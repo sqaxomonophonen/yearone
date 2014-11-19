@@ -511,12 +511,16 @@ int main(int argc, char** argv)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		text_set_window_dimensions(&text, render.window_width, render.window_height);
-		float color[4] = {1,0,0,1};
+		float color[4] = {1,1,1,1};
 		text_set_style(&text, font_ter24, 0, color);
 		text_set_cursor(&text, 32, 32);
-		text_printf(&text, "%.2f", world.t);
+		text_printf(&text, "%.2f æøå\n", world.t);
+		color[2] = 0;
+		text_set_style(&text, font_ter24, 1, color);
+		text_printf(&text, "boooold\n");
+		text_flush(&text);
 
-		world.t += 200;
+		world.t += 10000;
 
 		render_world(&render, &world, &observer);
 
