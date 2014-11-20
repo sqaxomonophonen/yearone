@@ -12,9 +12,14 @@
 #include "sol.h"
 #include "text.h"
 
-static float lerpf(float t, float x0, float x1)
+static inline float lerpf(float t, float x0, float x1)
 {
 	return x0 + (x1-x0)*t;
+}
+
+static inline float clampf(float v, float min, float max)
+{
+	return v < min ? min : v > max ? max : v;
 }
 
 static float eccentric_anomaly_from_mean_anomaly(float M, float eccentricity, int iterations)
@@ -56,7 +61,7 @@ static void calc_ellipse_position(
 	if (ny != NULL) *ny = By * Nx + Bx * Ny;
 }
 
-static void kepler_calc_position(struct celestial_body* body, struct celestial_body* parent, float t, float* dx, float* dy)
+static void kepler_calc_relative_position(struct celestial_body* body, struct celestial_body* parent, float t, float* dx, float* dy)
 {
 	float mu = G * parent->mass_kg;
 	float a = body->semi_major_axis_km;
@@ -90,7 +95,8 @@ void world_init(struct world* world, struct celestial_body* sol)
 struct observer {
 	float height_km_target;
 	float height_km;
-	int center_id;
+	struct celestial_body* cbody;
+	float cx, cy;
 };
 
 void observer_init(struct observer* observer)
@@ -116,6 +122,8 @@ struct render {
 	SDL_Window* window;
 	int window_width;
 	int window_height;
+
+	float scale;
 
 	struct shader path_shader;
 	GLuint path_a_position;
@@ -248,16 +256,18 @@ void render_init(struct render* render, SDL_Window* window)
 	text_init(&render->text);
 }
 
-void render_sun(struct render* render, struct celestial_body* sun, float scale, float x, float y)
+void render_sun(struct render* render, struct celestial_body* sun)
 {
 	shader_use(&render->sun_shader);
 	{
+		float x = sun->render_x;
+		float y = sun->render_y;
+
 		float dx = x / render->window_width * 2;
 		float dy = y / render->window_height * 2;
 		glUniform2f(render->sun_u_offset, dx, dy); CHKGL;
 
-		float actual_radius = sun->radius_km * scale;
-		float radius = actual_radius > sun->mock_radius ? actual_radius : sun->mock_radius;
+		float radius = sun->render_radius;
 		float sx = radius / render->window_width * 2;
 		float sy = radius / render->window_height * 2;
 		glUniform2f(render->sun_u_scale, sx, sy); CHKGL;
@@ -274,16 +284,18 @@ void render_sun(struct render* render, struct celestial_body* sun, float scale, 
 	glDisableVertexAttribArray(render->sun_a_position); CHKGL;
 }
 
-void render_body(struct render* render, struct celestial_body* body, float scale, float x0, float y0, float x, float y)
+void render_body(struct render* render, struct celestial_body* body)
 {
 	shader_use(&render->body_shader);
 	{
+		float x = body->render_x;
+		float y = body->render_y;
+
 		float dx = x / render->window_width * 2;
 		float dy = y / render->window_height * 2;
 		glUniform2f(render->body_u_offset, dx, dy); CHKGL;
 
-		float actual_radius = body->radius_km * scale;
-		float radius = actual_radius > body->mock_radius ? actual_radius : body->mock_radius;
+		float radius = body->render_radius;
 		float sx = radius / render->window_width * 2;
 		float sy = radius / render->window_height * 2;
 		glUniform2f(render->body_u_scale, sx, sy); CHKGL;
@@ -291,8 +303,8 @@ void render_body(struct render* render, struct celestial_body* body, float scale
 		float mu = 4.0/(radius*6.0);
 		glUniform1f(render->body_u_mu, mu); CHKGL;
 
-		float lx = -x0;
-		float ly = -y0;
+		float lx = -body->kepler_x;
+		float ly = -body->kepler_y;
 		float d = 1/sqrtf(lx*lx + ly*ly);
 		glUniform2f(render->body_u_light, lx*d, ly*d); CHKGL;
 
@@ -311,7 +323,7 @@ void render_body(struct render* render, struct celestial_body* body, float scale
 	glDisableVertexAttribArray(render->body_a_position); CHKGL;
 }
 
-void render_orbit(struct render* render, struct celestial_body* body, float scale, float cx, float cy)
+void render_orbit(struct render* render, struct celestial_body* body)
 {
 	render_prim_reset(render);
 
@@ -326,8 +338,8 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 		float x,y,nx,ny;
 		calc_ellipse_position(E, e, a, b, body->longitude_of_periapsis_rad, &x, &y, &nx, &ny);
 
-		x = (cx + x * scale) / render->window_width * 2;
-		y = (cy + y * scale) / render->window_height * 2;
+		x = (body->parent->render_x + x * render->scale) / render->window_width * 2;
+		y = (body->parent->render_y + y * render->scale) / render->window_height * 2;
 
 		float dn = 1.0/sqrtf(nx*nx + ny*ny);
 		nx = nx * dn / render->window_width * 2 * width;
@@ -375,70 +387,90 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 	glDisableVertexAttribArray(render->path_a_position); CHKGL;
 }
 
-void render_celestial_body(struct render* render, struct celestial_body* body, float scale, float t, float cx, float cy, float px, float py, float sx, float sy)
+void render_celestial_body(struct render* render, struct celestial_body* body)
 {
 	ASSERT(body->n_satellites == 0 || body->satellites != NULL);
 	for (int i = 0; i < body->n_satellites; i++) {
 		struct celestial_body* child = &body->satellites[i];
-		float dx,dy;
-		kepler_calc_position(child, body, t, &dx, &dy);
-		render_celestial_body(
-			render,
-			child,
-			scale,
-			t,
-			cx + dx * scale, cy + dy * scale,
-			cx, cy,
-			sx + dx * scale, sy + dy * scale
-		);
+		render_celestial_body(render, child);
 	}
 
 	switch (body->renderer) {
 		case CBR_SUN:
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-			render_sun(render, body, scale, cx, cy);
+			render_sun(render, body);
 			break;
 		case CBR_BODY:
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); CHKGL;
-			render_orbit(render, body, scale, px, py);
-			render_body(render, body, scale, sx, sy, cx, cy);
+			render_orbit(render, body);
+			render_body(render, body);
 			break;
 	}
 }
 
-void find_center(struct render* render, struct celestial_body* find, struct celestial_body* body, float scale, float t, float cx, float cy, float* rcx, float* rcy)
+void render_world(struct render* render, struct world* world)
 {
-	if (find == body) {
-		*rcx = cx;
-		*rcy = cy;
-		return;
+	render_celestial_body(render, world->sol);
+}
+
+
+void _update_body_kepler_position_rec(
+	struct celestial_body* body,
+	struct celestial_body* parent,
+	float t,
+	float x, float y)
+{
+	if (parent != NULL) {
+		float dx, dy;
+		kepler_calc_relative_position(body, parent, t, &dx, &dy);
+		x += dx;
+		y += dy;
+		body->kepler_x = x;
+		body->kepler_y = y;
+	} else {
+		body->kepler_x = 0;
+		body->kepler_y = 0;
 	}
 
-	ASSERT(body->n_satellites == 0 || body->satellites != NULL);
 	for (int i = 0; i < body->n_satellites; i++) {
 		struct celestial_body* child = &body->satellites[i];
-		float dx,dy;
-		kepler_calc_position(child, body, t, &dx, &dy);
-		find_center(render, find, child, scale, t, cx + dx * scale, cy + dy * scale, rcx, rcy);
+		_update_body_kepler_position_rec(child, body, t, x, y);
 	}
 }
 
-void render_world(struct render* render, struct world* world, struct observer* observer)
+void update_bodies_kepler_position(struct world* world)
 {
-	float scale = (float)render->window_height / observer->height_km;
-	float cx, cy;
-	double t = world_t1(world);
-	find_center(render, world->sol + observer->center_id, world->sol, scale, t, 0, 0, &cx, &cy);
-	render_celestial_body(
-		render,
+	_update_body_kepler_position_rec(world->sol, NULL, world_t1(world), 0, 0);
+}
+
+
+
+void _update_body_screen_position_rec(
+	struct celestial_body* body,
+	float scale,
+	float cx, float cy)
+{
+	body->render_x = (body->kepler_x - cx) * scale;
+	body->render_y = (body->kepler_y - cy) * scale;
+
+	float actual_radius = body->radius_km * scale;
+	body->render_radius = actual_radius > body->mock_radius ? actual_radius : body->mock_radius;
+
+	for (int i = 0; i < body->n_satellites; i++) {
+		struct celestial_body* child = &body->satellites[i];
+		_update_body_screen_position_rec(child, scale, cx, cy);
+	}
+}
+
+void update_bodies_screen_position(struct render* render, struct world* world, struct observer* observer)
+{
+	_update_body_screen_position_rec(
 		world->sol,
-		scale,
-		t,
-		-cx, -cy,
-		-1, -1,
-		0, 0
+		render->scale,
+		observer->cx, observer->cy
 	);
 }
+
 
 void _render_time(struct render* render, struct world* world, int64_t t)
 {
@@ -471,9 +503,30 @@ void render_time(struct render* render, struct world* world, int64_t dt60)
 		int64_t t = (world->t60 + i*dt60/(N/3)) / 60;
 		if (t>=0) _render_time(render, world, t);
 	}
-	text_flush(tx);
 }
 
+struct celestial_body* _find_body_at_screen_position_rec(struct render* render, struct celestial_body* body, int x, int y)
+{
+	float dx = (float)x - body->render_x - render->window_width/2;
+	float dy = (float)y + body->render_y - render->window_height/2;
+	float d = sqrtf(dx*dx + dy*dy);
+
+	if (d < body->render_radius) {
+		return body;
+	}
+
+	for (int i = 0; i < body->n_satellites; i++) {
+		struct celestial_body* found = _find_body_at_screen_position_rec(render, &body->satellites[i], x, y);
+		if (found != NULL) return found;
+	}
+
+	return NULL;
+}
+
+struct celestial_body* find_body_at_screen_position(struct render* render, struct world* world, int x, int y)
+{
+	return _find_body_at_screen_position_rec(render, world->sol, x, y);
+}
 
 int main(int argc, char** argv)
 {
@@ -534,11 +587,17 @@ int main(int argc, char** argv)
 	struct observer observer;
 	observer_init(&observer);
 
-	observer.center_id = 0;
+	observer.cbody = sol;
 	observer.height_km = observer.height_km_target = 3e8;
+
+	SDL_Cursor* arrow_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+	SDL_Cursor* click_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+	SDL_SetCursor(arrow_cursor);
 
 	int exiting = 0;
 	while (!exiting) {
+		int clicked = 0;
+
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) {
 			switch (e.type) {
@@ -551,9 +610,15 @@ int main(int argc, char** argv)
 				case SDL_MOUSEWHEEL:
 					observer.height_km_target *= powf(0.95, e.wheel.y);
 					break;
+				case SDL_MOUSEBUTTONDOWN:
+					clicked++;
+					break;
 			}
 		}
 
+		int mx = 0;
+		int my = 0;
+		SDL_GetMouseState(&mx, &my);
 
 		observer.height_km += (observer.height_km_target - observer.height_km) * 0.4f;
 
@@ -561,11 +626,26 @@ int main(int argc, char** argv)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		int64_t dt60 = 100000;
-		//world.t += 1.0/60.0;
 		world.t60 += dt60;
 		render_time(&render, &world, dt60);
 
-		render_world(&render, &world, &observer);
+		text_flush(&render.text);
+
+		update_bodies_kepler_position(&world);
+		observer.cx = observer.cbody->kepler_x;
+		observer.cy = observer.cbody->kepler_y;
+		render.scale = (float)render.window_height / observer.height_km;
+		update_bodies_screen_position(&render, &world, &observer);
+
+		struct celestial_body* hover = find_body_at_screen_position(&render, &world, mx, my);
+		if (hover != NULL) {
+			SDL_SetCursor(click_cursor);
+			if (clicked) observer.cbody = hover;
+		} else {
+			SDL_SetCursor(arrow_cursor);
+		}
+
+		render_world(&render, &world);
 
 		SDL_GL_SwapWindow(window);
 	}

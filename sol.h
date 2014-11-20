@@ -12,6 +12,7 @@
 struct celestial_body {
 	char* name;
 	struct celestial_body* satellites;
+	struct celestial_body* parent;
 	int n_satellites;
 	float mass_kg;
 	float mock_radius;
@@ -26,6 +27,12 @@ struct celestial_body {
 		CBR_SUN,
 		CBR_BODY
 	} renderer;
+
+	float render_x;
+	float render_y;
+	float render_radius;
+	float kepler_x;
+	float kepler_y;
 };
 
 struct celestial_body* mksol();

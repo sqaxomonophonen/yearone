@@ -482,6 +482,14 @@ static int swoozle_cmp(const void* va, const void* vb)
 	return a->n - b->n;
 }
 
+static void set_parents_rec(struct celestial_body* body, struct celestial_body* parent)
+{
+	body->parent = parent;
+	for (int i = 0; i < body->n_satellites; i++) {
+		set_parents_rec(&body->satellites[i], body);
+	}
+}
+
 struct celestial_body* mksol()
 {
 	mode = MODE_COUNT;
@@ -539,6 +547,8 @@ struct celestial_body* mksol()
 	memcpy(bodies, bodies2, bodies_sz);
 	free(swoozle);
 	free(bodies2);
+
+	set_parents_rec(bodies, NULL);
 
 	#ifdef DUMP_BODIES
 	celestial_body_dump(bodies);
