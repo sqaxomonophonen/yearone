@@ -88,6 +88,7 @@ void world_init(struct world* world, struct celestial_body* sol)
 }
 
 struct observer {
+	float height_km_target;
 	float height_km;
 	int center_id;
 };
@@ -534,7 +535,7 @@ int main(int argc, char** argv)
 	observer_init(&observer);
 
 	observer.center_id = 0;
-	observer.height_km = 3e8;
+	observer.height_km = observer.height_km_target = 3e8;
 
 	int exiting = 0;
 	while (!exiting) {
@@ -548,10 +549,13 @@ int main(int argc, char** argv)
 					if (e.key.keysym.sym == SDLK_ESCAPE) exiting = 1;
 					break;
 				case SDL_MOUSEWHEEL:
-					observer.height_km *= powf(0.9, e.wheel.y);
+					observer.height_km_target *= powf(0.95, e.wheel.y);
 					break;
 			}
 		}
+
+
+		observer.height_km += (observer.height_km_target - observer.height_km) * 0.4f;
 
 		glClearColor(0,0,0,1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
