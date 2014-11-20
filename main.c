@@ -111,7 +111,6 @@ struct render {
 	GLuint path_a_uv;
 	GLuint path_u_mu;
 	GLuint path_u_color1;
-	GLuint path_u_color2;
 
 	struct shader sun_shader;
 	GLuint sun_a_position;
@@ -177,7 +176,6 @@ void render_init(struct render* render, SDL_Window* window)
 		render->path_a_uv = glGetAttribLocation(render->path_shader.program, "a_uv"); CHKGL;
 		render->path_u_mu = glGetUniformLocation(render->path_shader.program, "u_mu"); CHKGL;
 		render->path_u_color1 = glGetUniformLocation(render->path_shader.program, "u_color1"); CHKGL;
-		render->path_u_color2 = glGetUniformLocation(render->path_shader.program, "u_color2"); CHKGL;
 	}
 
 	{ /* sun shader */
@@ -346,7 +344,6 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 		float b = body->color[2];
 
 		glUniform4f(render->path_u_color1, r, g, b, 0.5f);
-		glUniform4f(render->path_u_color2, r, g, b, 0.2f);
 	}
 
 	glEnableVertexAttribArray(render->path_a_position); CHKGL;
