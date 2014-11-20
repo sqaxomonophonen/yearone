@@ -105,11 +105,35 @@ void text_set_window_dimensions(struct text* text, int width, int height)
 	text->window_height = height;
 }
 
-void text_set_style(struct text* text, struct font* font, int variant, float color[4])
+void text_set_font(struct text* text, struct font* font)
 {
 	text->current_font = font;
+}
+
+void text_set_variant(struct text* text, int variant)
+{
 	text->current_variant = variant;
+}
+
+void text_set_color(struct text* text, float color[4])
+{
 	for (int i = 0; i < 4; i++) text->current_color[i] = color[i];
+}
+
+void text_set_color3f(struct text* text, float r, float g, float b)
+{
+	text->current_color[0] = r;
+	text->current_color[1] = g;
+	text->current_color[2] = b;
+	text->current_color[3] = 1;
+}
+
+void text_set_color4f(struct text* text, float r, float g, float b, float a)
+{
+	text->current_color[0] = r;
+	text->current_color[1] = g;
+	text->current_color[2] = b;
+	text->current_color[3] = a;
 }
 
 void text_set_cursor(struct text* text, int cx, int cy)

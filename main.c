@@ -72,9 +72,14 @@ static void kepler_calc_position(struct celestial_body* body, struct celestial_b
 
 struct world {
 	struct celestial_body* sol;
-	float t;
+	int64_t t60;
 };
 
+
+static double world_t1(struct world* world)
+{
+	return (double)world->t60 / 60.0;
+}
 
 void world_init(struct world* world, struct celestial_body* sol)
 {
@@ -142,6 +147,8 @@ struct render {
 	uint32_t* prim_index_data;
 	int prim_index_n;
 	int prim_index_max;
+
+	struct text text;
 };
 
 
@@ -236,6 +243,8 @@ void render_init(struct render* render, SDL_Window* window)
 		AN(render->prim_index_data = malloc(sz));
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sz, render->prim_index_data, GL_STREAM_DRAW); CHKGL;
 	}
+
+	text_init(&render->text);
 }
 
 void render_sun(struct render* render, struct celestial_body* sun, float scale, float x, float y)
@@ -417,17 +426,53 @@ void render_world(struct render* render, struct world* world, struct observer* o
 {
 	float scale = (float)render->window_height / observer->height_km;
 	float cx, cy;
-	find_center(render, world->sol + observer->center_id, world->sol, scale, world->t, 0, 0, &cx, &cy);
+	double t = world_t1(world);
+	find_center(render, world->sol + observer->center_id, world->sol, scale, t, 0, 0, &cx, &cy);
 	render_celestial_body(
 		render,
 		world->sol,
 		scale,
-		world->t,
+		t,
 		-cx, -cy,
 		-1, -1,
 		0, 0
 	);
 }
+
+void _render_time(struct render* render, struct world* world, int64_t t)
+{
+	struct text* tx = &render->text;
+	int second = t%60;
+	int minute = (t/60)%60;
+	int hour = (t/(60*60))%24;
+	int day = ((t/(60*60*24))%28)+1;
+	int month = ((t/(60*60*24*28))%12)+1;
+	int year = t/(60*60*24*28*12)+1;
+
+	text_set_cursor(tx, 16, render->window_height - 16 - 24);
+	text_printf(tx, "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
+}
+
+void render_time(struct render* render, struct world* world, int64_t dt60)
+{
+	int N = 10;
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+	struct text* tx = &render->text;
+	text_set_window_dimensions(tx, render->window_width, render->window_height);
+	text_set_font(tx, font_ter24);
+	text_set_variant(tx, 1);
+	float cs = 1.0 / (float)N;
+	text_set_color3f(tx, 0.8*cs, 1*cs, 1*cs);
+
+	for (int i = -N; i <= 0; i++) {
+		int64_t t = (world->t60 + i*dt60/(N/3)) / 60;
+		if (t>=0) _render_time(render, world, t);
+	}
+	text_flush(tx);
+}
+
 
 int main(int argc, char** argv)
 {
@@ -482,9 +527,6 @@ int main(int argc, char** argv)
 	struct render render;
 	render_init(&render, window);
 
-	struct text text;
-	text_init(&text);
-
 	struct world world;
 	world_init(&world, sol);
 
@@ -514,17 +556,10 @@ int main(int argc, char** argv)
 		glClearColor(0,0,0,1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		text_set_window_dimensions(&text, render.window_width, render.window_height);
-		float color[4] = {1,1,1,1};
-		text_set_style(&text, font_ter24, 0, color);
-		text_set_cursor(&text, 32, 32);
-		text_printf(&text, "%.2f æøå\n", world.t);
-		color[2] = 0;
-		text_set_style(&text, font_ter24, 1, color);
-		text_printf(&text, "boooold\n");
-		text_flush(&text);
-
-		world.t += 10000;
+		int64_t dt60 = 100000;
+		//world.t += 1.0/60.0;
+		world.t60 += dt60;
+		render_time(&render, &world, dt60);
 
 		render_world(&render, &world, &observer);
 
