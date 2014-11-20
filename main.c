@@ -632,8 +632,8 @@ int main(int argc, char** argv)
 		text_flush(&render.text);
 
 		update_bodies_kepler_position(&world);
-		observer.cx = observer.cbody->kepler_x;
-		observer.cy = observer.cbody->kepler_y;
+		observer.cx += (observer.cbody->kepler_x - observer.cx) * 0.4;
+		observer.cy += (observer.cbody->kepler_y - observer.cy) * 0.4;
 		render.scale = (float)render.window_height / observer.height_km;
 		update_bodies_screen_position(&render, &world, &observer);
 
