@@ -12,6 +12,11 @@
 #include "sol.h"
 #include "text.h"
 
+static float lerpf(float t, float x0, float x1)
+{
+	return x0 + (x1-x0)*t;
+}
+
 static float eccentric_anomaly_from_mean_anomaly(float M, float eccentricity, int iterations)
 {
 	float E = M;
@@ -339,9 +344,10 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 		float muy = 0.1f;
 		glUniform2f(render->path_u_mu, mux, muy);
 
-		float r = body->color[0];
-		float g = body->color[1];
-		float b = body->color[2];
+		float grayd = 0.6;
+		float r = lerpf(grayd, body->color[0], 0.4);
+		float g = lerpf(grayd, body->color[1], 0.4);
+		float b = lerpf(grayd, body->color[2], 0.4);
 
 		glUniform4f(render->path_u_color1, r, g, b, 0.5f);
 	}
