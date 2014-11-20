@@ -21,6 +21,11 @@ static float eccentric_anomaly_from_mean_anomaly(float M, float eccentricity, in
 	return E;
 }
 
+static float mean_anomaly_from_eccentric_anomaly(float E, float eccentricity)
+{
+	return E - eccentricity * sinf(E);
+}
+
 static void calc_ellipse_position(
 	float eccentric_anomaly,
 	float eccentricity,
@@ -305,7 +310,6 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 	float b =  a * sqrtf(1 - e*e);
 	for (int i = 0; i <= N; i++) {
 		float E = (float)(i%N)/(float)N*TAU;
-		float Ex = (float)i/(float)N*12.0f;
 		float x,y,nx,ny;
 		calc_ellipse_position(E, e, a, b, body->longitude_of_periapsis_rad, &x, &y, &nx, &ny);
 
@@ -316,9 +320,10 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 		nx = nx * dn / render->window_width * 2 * width;
 		ny = ny * dn / render->window_height * 2 * width;
 
+		float Mx = (mean_anomaly_from_eccentric_anomaly((float)i/(float)N*TAU, e) / TAU) * 12.0;
 		float xs[] = {
-			x - nx, y - ny, Ex, -1,
-			x + nx, y + ny, Ex, 1
+			x - nx, y - ny, Mx, -1,
+			x + nx, y + ny, Mx, 1
 		};
 		render_prim_vertex_data(render, xs, 8);
 
@@ -332,7 +337,7 @@ void render_orbit(struct render* render, struct celestial_body* body, float scal
 	shader_use(&render->path_shader);
 
 	{
-		float mux = 0.005f;
+		float mux = 0.003f;
 		float muy = 0.1f;
 		glUniform2f(render->path_u_mu, mux, muy);
 
