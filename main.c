@@ -186,9 +186,6 @@ void render_init(struct render* render, SDL_Window* window)
 	memset(render, 0, sizeof(*render));
 	render->window = window;
 
-	SDL_GetWindowSize(render->window, &render->window_width, &render->window_height);
-	glViewport(0, 0, render->window_width, render->window_height);
-
 	{ /* path shader */
 		#include "path.glsl.inc"
 		shader_init(&render->path_shader, path_vert_src, path_frag_src);
@@ -410,6 +407,9 @@ void render_celestial_body(struct render* render, struct celestial_body* body)
 
 void render_world(struct render* render, struct world* world)
 {
+	SDL_GetWindowSize(render->window, &render->window_width, &render->window_height);
+	glViewport(0, 0, render->window_width, render->window_height);
+
 	render_celestial_body(render, world->sol);
 }
 
@@ -539,7 +539,8 @@ int main(int argc, char** argv)
 		"year one",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		//1920,1080,SDL_WINDOW_OPENGL
-		0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_OPENGL
+		0, 0,
+		SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL
 	);
 	SAN(window);
 
